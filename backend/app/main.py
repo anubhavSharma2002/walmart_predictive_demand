@@ -10,6 +10,7 @@ from generate_future_input import generate_future_data
 from convert_m5_to_input import convert_real_data
 from app.model import load_model, predict_demand
 from app.utils import preprocess_data
+from datetime import datetime, timedelta
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -100,3 +101,60 @@ async def upload_data(sales_file: UploadFile = File(...), calendar_file: UploadF
 
     except Exception as e:
         return {"error": str(e)}
+    
+
+@app.get("/compare/{product_id}")
+def compare(product_id: str):
+    prediction_file = "exports/prediction.csv"
+    if not os.path.exists(prediction_file):
+        return {"error": "Prediction data not available"}
+
+    df = pd.read_csv(prediction_file)
+
+    today = datetime.today()
+    next_7_days = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
+
+    future_df = df[(df["product_id"].astype(str) == str(product_id))
+                   & (df["date"].isin(next_7_days))]
+    summary = future_df.groupby("region")["predicted_demand"].sum().reset_index()
+    summary.columns = ["region", "sum_predicted"]
+
+    inventory_file = "uploads/inventory.csv"
+    if not os.path.exists(inventory_file):
+        return {"error": "Inventory data not available. Please upload it first."}
+    inventory_df = pd.read_csv(inventory_file)
+
+    results = []
+    for _, row in summary.iterrows():
+        region = row["region"]
+        pred_sum = row["sum_predicted"]
+
+        inv_match = inventory_df[
+            (inventory_df["product_id"].astype(str) == str(product_id))
+            & (inventory_df["region"].astype(str) == str(region))
+        ]
+        inventory_count = inv_match["inventory"].values[0] if not inv_match.empty else 0
+        status = (
+            "Overstock" if inventory_count > pred_sum
+            else "Understock" if inventory_count < pred_sum
+            else "As required"
+        )
+        results.append({
+            "region": region,
+            "sum_predicted": round(pred_sum, 2),
+            "inventory": int(inventory_count),
+            "status": status
+        })
+
+    results = sorted(results, key=lambda x: x["sum_predicted"], reverse=True)
+
+    return results
+
+
+@app.post("/upload-inventory/")
+async def upload_inventory(inventory_file: UploadFile = File(...)):
+    path = os.path.join(UPLOAD_DIR, "inventory.csv")
+    with open(path, "wb") as f:
+        shutil.copyfileobj(inventory_file.file, f)
+
+    return {"message": "✅ Inventory uploaded successfully."}
