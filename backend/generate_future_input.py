@@ -1,23 +1,33 @@
 import pandas as pd
 from datetime import datetime, timedelta
 
-sales = pd.read_csv("app/sample_data/sales_train_validation.csv")
-products = sales["item_id"].unique()
-stores = sales["store_id"].unique()
+def generate_future_data(sales_path):
+    sales = pd.read_csv(sales_path)
+    products = sales["item_id"].unique()
+    stores = sales["store_id"].unique()
 
-start_date = datetime(2016, 3, 25)
-future_dates = [start_date + timedelta(days=i) for i in range(60)]
+    # Detect the latest date dynamically from calendar mapping
+    day_columns = [col for col in sales.columns if col.startswith("d_")]
+    last_day_col = day_columns[-1]
 
-data = []
-for date in future_dates:
-    for store in stores:
-        for product in products:
-            data.append({
-                "date": date.strftime("%Y-%m-%d"),
-                "region": store,
-                "product_id": product
-            })
+    # Assume calendar mapping exists locally
+    calendar_df = pd.read_csv("uploads/calendar.csv")
+    calendar_map = calendar_df.set_index("d")["date"].to_dict()
+    last_date_str = calendar_map.get(last_day_col)
+    start_date = datetime.strptime(last_date_str, "%Y-%m-%d")
 
-df = pd.DataFrame(data)
-df.to_csv("app/sample_data/future_input.csv", index=False)
-print("✅ Created future_input.csv with full date-product-store coverage.")
+    future_dates = [start_date + timedelta(days=i) for i in range(60)]
+
+    data = []
+    for date in future_dates:
+        for store in stores:
+            for product in products:
+                data.append({
+                    "date": date.strftime("%Y-%m-%d"),
+                    "region": store,
+                    "product_id": product
+                })
+
+    df = pd.DataFrame(data)
+    df.to_csv("app/sample_data/future_input.csv", index=False)
+    print("✅ Created future_input.csv with full date-product-store coverage.")

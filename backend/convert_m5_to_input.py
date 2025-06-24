@@ -1,22 +1,23 @@
 import pandas as pd
 
-sales = pd.read_csv("app/sample_data/sales_train_validation.csv")
-calendar = pd.read_csv("app/sample_data/calendar.csv")
+def convert_real_data(sales_path, calendar_path):
+    sales = pd.read_csv(sales_path)
+    calendar = pd.read_csv(calendar_path)
 
-days = [f"d_{i}" for i in range(1908, 1914)]
+    day_columns = [col for col in sales.columns if col.startswith("d_")]
+    days = day_columns[-7:]
+    # Adjust the range of days as needed, e.g., last 7 days
+    df = sales.melt(id_vars=["item_id", "store_id"], value_vars=days,
+                    var_name="d", value_name="sales")
 
-df = sales.melt(id_vars=["item_id", "store_id"], value_vars=days,
-                var_name="d", value_name="sales")
+    calendar_map = calendar.set_index("d")["date"].to_dict()
+    df["date"] = df["d"].map(calendar_map)
 
-calendar_map = calendar.set_index("d")["date"].to_dict()
-df["date"] = df["d"].map(calendar_map)
+    df.rename(columns={
+        "store_id": "region",
+        "item_id": "product_id"
+    }, inplace=True)
 
-df.rename(columns={
-    "store_id": "region",
-    "item_id": "product_id"
-}, inplace=True)
-
-df = df[["date", "region", "product_id", "sales"]]
-df.to_csv("app/sample_data/real_input.csv", index=False)
-
-print("✅ real_input.csv has been created.")
+    df = df[["date", "region", "product_id", "sales"]]
+    df.to_csv("app/sample_data/real_input.csv", index=False)
+    print("✅ Converted real sales data for analysis.")
