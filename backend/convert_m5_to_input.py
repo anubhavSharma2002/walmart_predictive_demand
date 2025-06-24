@@ -6,7 +6,7 @@ def convert_real_data(sales_path, calendar_path):
 
     day_columns = [col for col in sales.columns if col.startswith("d_")]
     days = day_columns[-7:]
-    # Adjust the range of days as needed, e.g., last 7 days
+
     df = sales.melt(id_vars=["item_id", "store_id"], value_vars=days,
                     var_name="d", value_name="sales")
 

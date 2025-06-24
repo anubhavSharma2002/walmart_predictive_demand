@@ -6,11 +6,9 @@ def generate_future_data(sales_path):
     products = sales["item_id"].unique()
     stores = sales["store_id"].unique()
 
-    # Detect the latest date dynamically from calendar mapping
     day_columns = [col for col in sales.columns if col.startswith("d_")]
     last_day_col = day_columns[-1]
 
-    # Assume calendar mapping exists locally
     calendar_df = pd.read_csv("uploads/calendar.csv")
     calendar_map = calendar_df.set_index("d")["date"].to_dict()
     last_date_str = calendar_map.get(last_day_col)

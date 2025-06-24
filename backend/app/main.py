@@ -11,23 +11,20 @@ from convert_m5_to_input import convert_real_data
 from app.model import load_model, predict_demand
 from app.utils import preprocess_data
 
-# Constants
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs("exports", exist_ok=True)
 
 app = FastAPI()
 
-# 🔁 Allow frontend requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Or restrict to ["http://localhost:3000"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 🔄 Predict demand from future_input.csv
 @app.get("/predict")
 def auto_predict():
     try:
@@ -52,7 +49,6 @@ def auto_predict():
     return output.to_dict(orient="records")
 
 
-# 📊 Metadata: unique products, regions, dates
 @app.get("/meta")
 def meta_info():
     df = pd.read_csv("exports/prediction.csv")
@@ -63,13 +59,11 @@ def meta_info():
     }
 
 
-# 📥 Download CSV of predictions
 @app.get("/download")
 def download():
     return FileResponse("exports/prediction.csv", filename="predicted_demand.csv", media_type="text/csv")
 
 
-# ⬆️ Upload new training data + retrain model
 @app.post("/upload-data/")
 async def upload_data(sales_file: UploadFile = File(...), calendar_file: UploadFile = File(...)):
     sales_path = os.path.join(UPLOAD_DIR, sales_file.filename)
@@ -81,16 +75,12 @@ async def upload_data(sales_file: UploadFile = File(...), calendar_file: UploadF
         shutil.copyfileobj(calendar_file.file, c)
 
     try:
-        # Step 1: Retrain model
         train_model(sales_path, calendar_path)
 
-        # Step 2: Convert real data for analysis
         convert_real_data(sales_path, calendar_path)
 
-        # Step 3: Generate future_input.csv from uploaded sales data
         generate_future_data(sales_path)
 
-        # Step 4: Run prediction with freshly trained model
         model = load_model()
         df = pd.read_csv("app/sample_data/future_input.csv")
         df["region_original"] = df["region"]
