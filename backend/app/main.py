@@ -103,8 +103,8 @@ async def upload_data(sales_file: UploadFile = File(...), calendar_file: UploadF
         return {"error": str(e)}
     
 
-@app.get("/compare/{product_id}")
-def compare(product_id: str):
+@app.get("/compare")
+def compare(product_id: str = "All", region: str = "All"):
     prediction_file = "exports/prediction.csv"
     if not os.path.exists(prediction_file):
         return {"error": "Prediction data not available"}
@@ -114,10 +114,16 @@ def compare(product_id: str):
     today = datetime.today()
     next_7_days = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
 
-    future_df = df[(df["product_id"].astype(str) == str(product_id))
-                   & (df["date"].isin(next_7_days))]
-    summary = future_df.groupby("region")["predicted_demand"].sum().reset_index()
-    summary.columns = ["region", "sum_predicted"]
+    future_df = df[df["date"].isin(next_7_days)]
+
+    if product_id != "All":
+        future_df = future_df[future_df["product_id"].astype(str) == str(product_id)]
+
+    if future_df.empty:
+        return {"error": f"No prediction available for selected filter(s) in the next 7 days."}
+
+    summary = future_df.groupby(["product_id", "region"])["predicted_demand"].sum().reset_index()
+    summary.columns = ["product_id", "region", "sum_predicted"]
 
     inventory_file = "uploads/inventory.csv"
     if not os.path.exists(inventory_file):
@@ -126,22 +132,27 @@ def compare(product_id: str):
 
     results = []
     for _, row in summary.iterrows():
-        region = row["region"]
-        pred_sum = row["sum_predicted"]
+        prediction_region = str(row["region"])
+        prediction_pincode = prediction_region.split('_')[1] if '_' in prediction_region else prediction_region
+
+        if region != "All" and prediction_pincode != region:
+            continue
 
         inv_match = inventory_df[
-            (inventory_df["product_id"].astype(str) == str(product_id))
-            & (inventory_df["region"].astype(str) == str(region))
+            (inventory_df["product_id"].astype(str) == str(row["product_id"]))
+            & (inventory_df["region"].astype(str).str.contains(prediction_pincode))
         ]
-        inventory_count = inv_match["inventory"].values[0] if not inv_match.empty else 0
+        inventory_count = inv_match["inventory"].sum() if not inv_match.empty else 0
+
         status = (
-            "Overstock" if inventory_count > pred_sum
-            else "Understock" if inventory_count < pred_sum
+            "Overstock" if inventory_count > row["sum_predicted"]
+            else "Understock" if inventory_count < row["sum_predicted"]
             else "As required"
         )
         results.append({
-            "region": region,
-            "sum_predicted": round(pred_sum, 2),
+            "product_id": row["product_id"],
+            "region": prediction_pincode,
+            "sum_predicted": round(row["sum_predicted"], 2),
             "inventory": int(inventory_count),
             "status": status
         })
@@ -149,6 +160,7 @@ def compare(product_id: str):
     results = sorted(results, key=lambda x: x["sum_predicted"], reverse=True)
 
     return results
+
 
 
 @app.post("/upload-inventory/")

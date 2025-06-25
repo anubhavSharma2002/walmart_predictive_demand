@@ -16,3 +16,18 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.leaflet-container {
+  height: 300px;
+  width: 100%;
+}
+
+@keyframes blinking {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.blinking-marker {
+  animation: blinking 1.5s infinite;
+}
