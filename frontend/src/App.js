@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 import Dashboard from "./components/Dashboard"; 
-import Compare from "./components/Compare"; 
+import Compare from "./components/Compare";
+import TransportOptimization from "./components/TransportOptimization";
 
 function App() {
   const [productOptions, setProductOptions] = useState([]);
@@ -31,6 +32,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/compare" element={<Compare productOptions={productOptions} />} />
+        <Route path="/transport" element={<TransportOptimization />} />
       </Routes>
     </Router>
   );
