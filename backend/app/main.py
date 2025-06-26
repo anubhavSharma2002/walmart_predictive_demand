@@ -234,6 +234,15 @@ def compare(product_id: str = "All", region: str = "All"):
     return results
 
 
+@app.post("/upload-inventory/")
+async def upload_inventory(inventory_file: UploadFile = File(...)):
+    path = os.path.join(UPLOAD_DIR, "inventory.csv")
+    with open(path, "wb") as f:
+        shutil.copyfileobj(inventory_file.file, f)
+
+    return {"message": "✅ Inventory uploaded successfully."}
+
+
 @app.post("/optimize-transport/")
 async def optimize_transport(stock_file: UploadFile = File(...),
                              cost_rate: float = Form(...),
