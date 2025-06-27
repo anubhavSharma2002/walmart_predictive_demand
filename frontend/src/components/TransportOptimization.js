@@ -39,7 +39,7 @@ function TransportOptimization() {
       setLoading(false);
     }
   };
-  
+
   const handleExport = () => {
     if (!results.length) {
       alert("No results to export.");
@@ -58,7 +58,7 @@ function TransportOptimization() {
     const headers = ["From Store", "To Store", "Item", "Units", "Distance (km)", "Cost", "Time (mins)"];
     const rows = [];
     for (const [fromStore, stops] of Object.entries(groupedResults)) {
-      rows.push([`FROM ${fromStore}`]); 
+      rows.push([`FROM ${fromStore}`]);
       stops.forEach(stop =>
         rows.push([
           fromStore,
@@ -82,7 +82,21 @@ function TransportOptimization() {
     link.href = url;
     link.click();
   };
-  
+
+  const getGoogleMapsUrl = (fromStore, stops) => {
+    const seen = new Set();
+    const orderedUniqueStops = stops
+      .map(stop => stop.to_store)
+      .filter(to => {
+        if (seen.has(to)) return false;
+        seen.add(to);
+        return true;
+      });
+    const route = [fromStore, ...orderedUniqueStops];
+    return `https://www.google.com/maps/dir/${route.join("/")}`;
+  };
+
+
   return (
     <div className="p-4 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold">Transport Optimization</h1>
@@ -142,7 +156,27 @@ function TransportOptimization() {
             }, {})
           ).map(([fromStore, stops]) => (
             <div key={fromStore} className="mb-4 p-4 rounded border">
-              <h2 className="text-xl font-bold">From Store: {fromStore}</h2>
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">From Store: {fromStore}</h2>
+                <a
+                  href={getGoogleMapsUrl(fromStore, stops)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="View Route on Google Maps"
+                  className="text-blue-600 hover:underline flex items-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="ml-2"
+                  >
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 4.63 7 13 7 13s7-8.37 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
+                  </svg>
+                  <span className="ml-1">Map</span>
+                </a>
+              </div>
               <table className="min-w-full mt-2 border">
                 <thead>
                   <tr>
@@ -154,15 +188,32 @@ function TransportOptimization() {
                     <th className="border p-2">Time (mins)</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {stops.map((stop, idx) => (
+                  <tbody>
+                  {Object.values(
+                    stops.reduce((acc, stop) => {
+                      const key = stop.to_store;
+                      if (!acc[key]) {
+                        acc[key] = {
+                          to_store: key,
+                          items: [],
+                          units: [],
+                          distance: stop.distance,
+                          cost: stop.cost,
+                          time: stop.time,
+                        };
+                      }
+                      acc[key].items.push(stop.item);
+                      acc[key].units.push(stop.units);
+                      return acc;
+                    }, {})
+                  ).map((grouped, idx) => (
                     <tr key={idx}>
-                      <td className="border p-2">{stop.to_store}</td>
-                      <td className="border p-2">{stop.item}</td>
-                      <td className="border p-2">{stop.units}</td>
-                      <td className="border p-2">{stop.distance}</td>
-                      <td className="border p-2">{stop.cost}</td>
-                      <td className="border p-2">{stop.time}</td>
+                      <td className="border p-2">{grouped.to_store}</td>
+                      <td className="border p-2">{grouped.items.join(", ")}</td>
+                      <td className="border p-2">{grouped.units.join(", ")}</td>
+                      <td className="border p-2">{grouped.distance.toFixed(2)}</td>
+                      <td className="border p-2">{grouped.cost.toFixed(2)}</td>
+                      <td className="border p-2">{grouped.time.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
