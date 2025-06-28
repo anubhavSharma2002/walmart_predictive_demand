@@ -31,9 +31,14 @@ function TransportOptimization() {
       formData.append("cost_rate", costRate);
       formData.append("min_quantity", minThreshold);
 
-      const res = await axios.post("http://localhost:8000/optimize-transport/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await axios.post(
+        `${process.env.REACT_APP_API_BASE_URL}/optimize-transport/`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
       if (res.data.error) {
         setError(res.data.error);
       } else {
@@ -80,8 +85,7 @@ function TransportOptimization() {
   };
 
   const getGoogleEmbedUrl = (fromStore, stops) => {
-  const apiKey = "AIzaSyBezbJZYol0RMJ9rucQggMO5avxIQ94GNw"; // replace with your key
-
+  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
   const seen = new Set();
   const orderedStops = stops
     .map(stop => stop.to_store)
