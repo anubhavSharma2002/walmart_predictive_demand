@@ -24,9 +24,14 @@ os.makedirs("exports", exist_ok=True)
 
 app = FastAPI()
 
+origins = [
+    "http://localhost:3000",  # local testing
+    "https://walmart-predictive-demand.vercel.app",  # replace with your actual Vercel domain
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
