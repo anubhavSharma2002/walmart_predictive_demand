@@ -1,33 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
+/* ✅ Set global background to match chart */
 body {
+  @apply bg-[#F3F5FF] text-[#1E293B] font-poppins;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+/* Leaflet map container */
 .leaflet-container {
   height: 300px;
   width: 100%;
 }
 
+/* Blinking marker animation */
 @keyframes blinking {
-  0% { opacity: 1; }
-  50% { opacity: 0.3; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .blinking-marker {
   animation: blinking 1.5s infinite;
+}
+/* Fix for Recharts SVG white background */
+.recharts-wrapper > svg {
+  background-color: #F3F5FF !important;
+  border-radius: 1rem;
 }

@@ -1,31 +1,34 @@
 function Controls({ filters, setFilters, productOptions }) {
   return (
-    <div className="flex flex-wrap gap-4 items-center justify-center mb-4">
+    <div className="flex flex-wrap gap-4 items-center justify-center mb-6 bg-[#F3F5FF] font-[Poppins]">
       <select
-        className="border p-2 rounded"
+        className="bg-white text-[#1E293B] border border-gray-300 px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] transition"
         value={filters.product}
         onChange={(e) => setFilters({ ...filters, product: e.target.value })}
       >
         <option value="">All Products</option>
         {productOptions.map((p) => (
-          <option key={p} value={p}>{p}</option>
+          <option key={p} value={p}>
+            {p}
+          </option>
         ))}
       </select>
 
       <input
         type="date"
-        className="border p-2 rounded"
+        className="bg-white text-[#1E293B] border border-gray-300 px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] transition"
         value={filters.date}
         onChange={(e) => setFilters({ ...filters, date: e.target.value })}
       />
 
       <button
         onClick={() => window.open("http://localhost:8000/download")}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        className="bg-[#0B0A33] hover:bg-[#5335D9] text-white font-medium px-6 py-2 rounded-full transition"
       >
         Export CSV
       </button>
     </div>
   );
 }
+
 export default Controls;
