@@ -6,6 +6,4 @@ xgboost
 python-multipart
 joblib
 gunicorn
-Flask
-flask-cors
 requests
