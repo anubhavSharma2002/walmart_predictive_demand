@@ -8,3 +8,4 @@ joblib
 gunicorn
 Flask
 flask-cors
+requests
