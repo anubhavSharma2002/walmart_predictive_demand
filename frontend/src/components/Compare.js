@@ -45,12 +45,14 @@ function Compare({ productOptions }) {
   const handleCompare = async () => {
     setError("");
     try {
-      const res = await axios.get("http://localhost:8000/compare", {
-        params: {
-          product_id: selectedProduct,
-        },
-      });
-
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/compare`,
+        {
+          params: {
+            product_id: selectedProduct,
+          },
+        }
+      );
       if (res.data.error) {
         setError(res.data.error);
         setResults([]);

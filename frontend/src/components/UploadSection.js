@@ -22,10 +22,11 @@ function UploadSection({ onUploadComplete }) {
     formData.append("calendar_file", calendarFile);
 
     try {
-      const res = await fetch("http://localhost:8000/upload-data/", {
+      const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/upload-data/`, {
         method: "POST",
         body: formData,
       });
+
       const data = await res.json();
       if (data.message) {
         setMessage(data.message);

@@ -45,7 +45,7 @@ function App() {
   const [productOptions, setProductOptions] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:8000/meta")
+    axios.get(`${process.env.REACT_APP_API_BASE_URL}/meta`)
       .then((res) => {
         if (res.data && Array.isArray(res.data.products)) {
           setProductOptions(res.data.products);

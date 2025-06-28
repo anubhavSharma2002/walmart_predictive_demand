@@ -22,7 +22,9 @@ function Controls({ filters, setFilters, productOptions }) {
       />
 
       <button
-        onClick={() => window.open("http://localhost:8000/download")}
+        onClick={() =>
+          window.open(`${process.env.REACT_APP_API_BASE_URL}/download`, "_blank")
+        }
         className="bg-[#0B0A33] hover:bg-[#5335D9] text-white font-medium px-6 py-2 rounded-full transition"
       >
         Export CSV

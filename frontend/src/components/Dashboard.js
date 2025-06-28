@@ -22,7 +22,7 @@ function Dashboard() {
   const fetchPrediction = useCallback(() => {
     setLoading(true);
     axios
-      .get("http://localhost:8000/predict")
+      .get(`${process.env.REACT_APP_API_BASE_URL}/predict`)
       .then((res) => {
         if (Array.isArray(res.data)) {
           setData(res.data);
@@ -59,10 +59,11 @@ function Dashboard() {
     formData.append("inventory_file", inventoryFile);
 
     try {
-      const res = await fetch("http://localhost:8000/upload-inventory/", {
+      const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/upload-inventory/`, {
         method: "POST",
         body: formData,
       });
+
       const data = await res.json();
       if (data.message) {
         setInventoryMessage(data.message);
