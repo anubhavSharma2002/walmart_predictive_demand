@@ -15,13 +15,6 @@ import requests
 from fastapi.responses import JSONResponse
 import logging
 
-
-logging.basicConfig(level=logging.DEBUG)
-
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs("exports", exist_ok=True)
-
 app = FastAPI()
 
 origins = [
@@ -36,6 +29,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+logging.basicConfig(level=logging.DEBUG)
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs("exports", exist_ok=True)
 
 import requests
 import logging
