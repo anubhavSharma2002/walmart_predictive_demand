@@ -1,6 +1,5 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import FileResponse
-from fastapi.middleware.cors import CORSMiddleware
+from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
 import pandas as pd
 import shutil
 import os
@@ -10,41 +9,16 @@ import itertools
 import requests
 
 from model.train_model import train_model
-from generate_future_input import generate_future_data
 from convert_m5_to_input import convert_real_data
-from app.model import load_model, predict_demand
-from app.utils import preprocess_data
-from datetime import datetime, timedelta
+from generate_future_input import generate_future_data
+from model import load_model, predict_demand
+from utils import preprocess_data
 
-from fastapi import UploadFile, File, Form
-import itertools
-import requests
-from fastapi.responses import JSONResponse
-
-app = FastAPI()
-
-# CORS Configuration
-origins= [
-    "http://localhost:3000",
-    "https://walmart-predictive-demand.vercel.app",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = Flask(__name__)
+CORS(app)
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs("exports", exist_ok=True)
-
-app = FastAPI()
-
-# Ensure required folders exist
-os.makedirs("uploads", exist_ok=True)
 os.makedirs("exports", exist_ok=True)
 os.makedirs("app/sample_data", exist_ok=True)
 
@@ -75,35 +49,31 @@ def get_coords_for_store(store_string):
 def get_distance(store_a_string, store_b_string):
     coords = get_coords_for_store(store_a_string), get_coords_for_store(store_b_string)
     if not coords[0] or not coords[1]:
-        logging.warning(f"No coordinates found for: {store_a_string}, {store_b_string}")
         return 10
-    url = f"http://router.project-osrm.org/route/v1/driving/{coords[0][1]},{coords[0][0]};{coords[1][1]},{coords[1][0]}?overview=false"
     try:
+        url = f"http://router.project-osrm.org/route/v1/driving/{coords[0][1]},{coords[0][0]};{coords[1][1]},{coords[1][0]}?overview=false"
         data = requests.get(url).json()
         return data["routes"][0]["distance"] / 1000.0 if "routes" in data and data["routes"] else 10
-    except Exception as e:
-        logging.error(f"OSRM error: {e}")
+    except:
         return 10
-    
-@app.get("/status")
-def status():
-    model_exists = os.path.exists("model/trained_model.pkl")
-    input_exists = os.path.exists("app/sample_data/future_input.csv")
-    return {
-        "model_trained": model_exists,
-        "input_ready": input_exists,
-        "ready": model_exists and input_exists
-    }
 
-@app.get("/predict")
+@app.route("/status")
+def status():
+    return jsonify({
+        "model_trained": os.path.exists("model/trained_model.pkl"),
+        "input_ready": os.path.exists("app/sample_data/future_input.csv"),
+        "ready": os.path.exists("model/trained_model.pkl") and os.path.exists("app/sample_data/future_input.csv")
+    })
+
+@app.route("/predict")
 def auto_predict():
     try:
         model = load_model()
     except FileNotFoundError as e:
-        return {"error": str(e)}
-    
+        return jsonify({"error": str(e)})
+
     if not os.path.exists("app/sample_data/future_input.csv"):
-        return {"error": "❌ Prediction input not found. Please upload data and train the model first."}
+        return jsonify({"error": "❌ Prediction input not found. Please upload data and train the model first."})
 
     df = pd.read_csv("app/sample_data/future_input.csv")
     df["region_original"] = df["region"]
@@ -115,68 +85,80 @@ def auto_predict():
     df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
     output = df[["date", "region", "product_id", "predicted_demand"]]
     output.to_csv("exports/prediction.csv", index=False)
-    return output.to_dict(orient="records")
+    return jsonify(output.to_dict(orient="records"))
 
-@app.get("/meta")
+@app.route("/meta")
 def meta_info():
     df = pd.read_csv("exports/prediction.csv")
-    return {
+    return jsonify({
         "products": df["product_id"].unique().tolist(),
         "regions": df["region"].unique().tolist(),
         "dates": sorted(df["date"].unique().tolist()),
-    }
+    })
 
-@app.get("/download")
+@app.route("/download")
 def download():
-    return FileResponse("exports/prediction.csv", filename="predicted_demand.csv", media_type="text/csv")
+    return send_file("exports/prediction.csv", as_attachment=True)
 
-@app.post("/upload-data/")
-async def upload_data(sales_file: UploadFile = File(...), calendar_file: UploadFile = File(...)):
+@app.route("/upload-data/", methods=["POST"])
+def upload_data():
+    sales_file = request.files.get("sales_file")
+    calendar_file = request.files.get("calendar_file")
+    if not sales_file or not calendar_file:
+        return jsonify({"error": "❌ Both sales and calendar files are required."})
+
     sales_path = os.path.join(UPLOAD_DIR, sales_file.filename)
     calendar_path = os.path.join(UPLOAD_DIR, calendar_file.filename)
-
-    with open(sales_path, "wb") as s:
-        shutil.copyfileobj(sales_file.file, s)
-    with open(calendar_path, "wb") as c:
-        shutil.copyfileobj(calendar_file.file, c)
+    sales_file.save(sales_path)
+    calendar_file.save(calendar_path)
 
     try:
         train_model(sales_path, calendar_path)
         convert_real_data(sales_path, calendar_path)
         generate_future_data(sales_path)
 
-        model = load_model()
         df = pd.read_csv("app/sample_data/future_input.csv")
         df["region_original"] = df["region"]
         df["product_id_original"] = df["product_id"]
         processed = preprocess_data(df)
-        df["predicted_demand"] = predict_demand(model, processed)
+        df["predicted_demand"] = predict_demand(load_model(), processed)
         df["region"] = df["region_original"]
         df["product_id"] = df["product_id_original"]
         df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
-        output = df[["date", "region", "product_id", "predicted_demand"]]
-        output.to_csv("exports/prediction.csv", index=False)
+        df[["date", "region", "product_id", "predicted_demand"]].to_csv("exports/prediction.csv", index=False)
 
-        return {"message": "✅ Data uploaded, model retrained, and prediction updated successfully."}
+        return jsonify({"message": "✅ Data uploaded, model retrained, and prediction updated successfully."})
     except Exception as e:
-        return {"error": str(e)}
+        return jsonify({"error": str(e)})
 
-@app.get("/compare")
-def compare(product_id: str = "All", region: str = "All"):
+@app.route("/upload-inventory/", methods=["POST"])
+def upload_inventory():
+    inventory_file = request.files.get("inventory_file")
+    if not inventory_file:
+        return jsonify({"error": "No inventory file uploaded."})
+    inventory_file.save("uploads/inventory.csv")
+    return jsonify({"message": "✅ Inventory uploaded successfully."})
+
+@app.route("/compare")
+def compare():
+    product_id = request.args.get("product_id", "All")
+    region = request.args.get("region", "All")
+
     if not os.path.exists("exports/prediction.csv"):
-        return {"error": "Prediction data not available"}
+        return jsonify({"error": "Prediction data not available"})
+
     df = pd.read_csv("exports/prediction.csv")
     next_7_days = [(datetime.today() + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
     df = df[df["date"].isin(next_7_days)]
     if product_id != "All":
         df = df[df["product_id"].astype(str) == str(product_id)]
     if df.empty:
-        return {"error": "No prediction available for selected filters."}
+        return jsonify({"error": "No prediction available for selected filters."})
 
     summary = df.groupby(["product_id", "region"])["predicted_demand"].sum().reset_index()
     inventory_file = "uploads/inventory.csv"
     if not os.path.exists(inventory_file):
-        return {"error": "Inventory data not available. Please upload it first."}
+        return jsonify({"error": "Inventory data not available. Please upload it first."})
     inventory_df = pd.read_csv(inventory_file)
 
     results = []
@@ -200,19 +182,16 @@ def compare(product_id: str = "All", region: str = "All"):
             "status": status
         })
 
-    return sorted(results, key=lambda x: x["sum_predicted"], reverse=True)
+    return jsonify(sorted(results, key=lambda x: x["sum_predicted"], reverse=True))
 
-@app.post("/upload-inventory/")
-async def upload_inventory(inventory_file: UploadFile = File(...)):
-    with open("uploads/inventory.csv", "wb") as f:
-        shutil.copyfileobj(inventory_file.file, f)
-    return {"message": "✅ Inventory uploaded successfully."}
+@app.route("/optimize-transport/", methods=["POST"])
+def optimize_transport():
+    stock_file = request.files.get("stock_file")
+    cost_rate = float(request.form.get("cost_rate", 0))
+    min_quantity = int(request.form.get("min_quantity", 0))
 
-@app.post("/optimize-transport/")
-async def optimize_transport(stock_file: UploadFile = File(...), cost_rate: float = Form(...), min_quantity: int = Form(...)):
     path = os.path.join("uploads", stock_file.filename)
-    with open(path, "wb") as f:
-        shutil.copyfileobj(stock_file.file, f)
+    stock_file.save(path)
 
     df = pd.read_csv(path)
     df.columns = [col.strip() for col in df.columns]
@@ -222,7 +201,7 @@ async def optimize_transport(stock_file: UploadFile = File(...), cost_rate: floa
     elif "Store (Region)" in df.columns:
         df["Pincode"] = df["Store (Region)"].apply(lambda x: str(x).split('(')[-1].split(')')[0] if '(' in str(x) else str(x))
     else:
-        return {"error": "Missing store location column."}
+        return jsonify({"error": "Missing store location column."})
 
     df["Final Stock Count"] = (
         df["Final Stock Count"].astype(str)
@@ -290,36 +269,26 @@ async def optimize_transport(stock_file: UploadFile = File(...), cost_rate: floa
                 "stops": best_sequence,
             })
 
-    return results
+    return jsonify(results)
 
-@app.post("/reset")
+@app.route("/reset", methods=["POST"])
 def reset_backend():
     deleted = []
-
-    # Paths to individual files
     files_to_remove = [
         "model/trained_model.pkl",
         "app/sample_data/future_input.csv",
         "exports/prediction.csv",
     ]
-
-    # Delete specific files
     for path in files_to_remove:
         if os.path.exists(path):
             os.remove(path)
             deleted.append(path)
+    for f in os.listdir("uploads"):
+        full_path = os.path.join("uploads", f)
+        if os.path.isfile(full_path):
+            os.remove(full_path)
+            deleted.append(full_path)
+    return jsonify({"message": "🧹 Backend reset successfully.", "files_deleted": deleted})
 
-    # Delete all files in uploads/
-    upload_dir = "uploads"
-    if os.path.exists(upload_dir):
-        for f in os.listdir(upload_dir):
-            full_path = os.path.join(upload_dir, f)
-            if os.path.isfile(full_path):
-                os.remove(full_path)
-                deleted.append(full_path)
-
-    return {
-        "message": "🧹 Backend reset successfully.",
-        "files_deleted": deleted
-    }
-
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)

@@ -1,9 +1,9 @@
-fastapi
-uvicorn
+flask
+flask-cors
 pandas
 scikit-learn
 xgboost
-python-multipart
 joblib
-gunicorn
 requests
+gunicorn
+python-multipart
