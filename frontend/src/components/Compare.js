@@ -227,7 +227,7 @@ function Compare({ productOptions }) {
                 <tr>
                   <th className="border p-3">Product</th>
                   <th className="border p-3">Store (Pincode)</th>
-                  <th className="border p-3">Sum Predicted (7d)</th>
+                  <th className="border p-3">Sum Predicted (30d)</th>
                   <th className="border p-3">Inventory</th>
                   <th className="border p-3">Status</th>
                   <th className="border p-3">Stock (+/-)</th>

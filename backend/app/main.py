@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
@@ -14,8 +14,17 @@ from generate_future_input import generate_future_data
 from convert_m5_to_input import convert_real_data
 from app.model import load_model, predict_demand
 from app.utils import preprocess_data
+from datetime import datetime, timedelta
 
-# Initialize FastAPI app
+from fastapi import UploadFile, File, Form
+import itertools
+import requests
+from fastapi.responses import JSONResponse
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs("exports", exist_ok=True)
+
 app = FastAPI()
 
 # CORS Configuration
@@ -73,6 +82,16 @@ def get_distance(store_a_string, store_b_string):
     except Exception as e:
         logging.error(f"OSRM error: {e}")
         return 10
+    
+@app.get("/status")
+def status():
+    model_exists = os.path.exists("model/trained_model.pkl")
+    input_exists = os.path.exists("app/sample_data/future_input.csv")
+    return {
+        "model_trained": model_exists,
+        "input_ready": input_exists,
+        "ready": model_exists and input_exists
+    }
 
 @app.get("/predict")
 def auto_predict():
@@ -80,6 +99,9 @@ def auto_predict():
         model = load_model()
     except FileNotFoundError as e:
         return {"error": str(e)}
+    
+    if not os.path.exists("app/sample_data/future_input.csv"):
+        return {"error": "❌ Prediction input not found. Please upload data and train the model first."}
 
     df = pd.read_csv("app/sample_data/future_input.csv")
     df["region_original"] = df["region"]
@@ -108,8 +130,9 @@ def download():
 
 @app.post("/upload-data/")
 async def upload_data(sales_file: UploadFile = File(...), calendar_file: UploadFile = File(...)):
-    sales_path = os.path.join("uploads", sales_file.filename)
-    calendar_path = os.path.join("uploads", calendar_file.filename)
+    sales_path = os.path.join(UPLOAD_DIR, sales_file.filename)
+    calendar_path = os.path.join(UPLOAD_DIR, calendar_file.filename)
+
     with open(sales_path, "wb") as s:
         shutil.copyfileobj(sales_file.file, s)
     with open(calendar_path, "wb") as c:
