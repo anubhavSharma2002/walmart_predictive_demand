@@ -21,14 +21,10 @@ import itertools
 import requests
 from fastapi.responses import JSONResponse
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs("exports", exist_ok=True)
-
 app = FastAPI()
 
 # CORS Configuration
-origins = [
+origins= [
     "http://localhost:3000",
     "https://walmart-predictive-demand.vercel.app",
 ]
@@ -40,6 +36,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs("exports", exist_ok=True)
+
+app = FastAPI()
 
 # Ensure required folders exist
 os.makedirs("uploads", exist_ok=True)
