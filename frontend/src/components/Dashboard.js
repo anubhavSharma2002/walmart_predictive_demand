@@ -165,6 +165,27 @@ function Dashboard() {
               Compare
             </button>
           </div>
+              <button
+                  onClick={async () => {
+                    const confirmed = window.confirm("Are you sure you want to reset all uploaded data and predictions?");
+                    if (!confirmed) return;
+
+                    try {
+                      const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/reset`, {
+                        method: "POST",
+                      });
+                      const result = await res.json();
+                      alert(result.message);
+                      fetchPrediction(); // refresh data
+                    } catch (err) {
+                      alert("❌ Failed to reset backend.");
+                    }
+                  }}
+                  className="mt-4 w-[200px] bg-red-600 hover:bg-red-800 text-white px-5 py-2 rounded-full font-medium shadow-sm transition"
+                >
+                  🧹 Reset Backend
+              </button>
+
         </div>
 
         {inventoryMessage && (

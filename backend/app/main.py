@@ -289,3 +289,35 @@ async def optimize_transport(stock_file: UploadFile = File(...), cost_rate: floa
             })
 
     return results
+
+@app.post("/reset")
+def reset_backend():
+    deleted = []
+
+    # Paths to individual files
+    files_to_remove = [
+        "model/trained_model.pkl",
+        "app/sample_data/future_input.csv",
+        "exports/prediction.csv",
+    ]
+
+    # Delete specific files
+    for path in files_to_remove:
+        if os.path.exists(path):
+            os.remove(path)
+            deleted.append(path)
+
+    # Delete all files in uploads/
+    upload_dir = "uploads"
+    if os.path.exists(upload_dir):
+        for f in os.listdir(upload_dir):
+            full_path = os.path.join(upload_dir, f)
+            if os.path.isfile(full_path):
+                os.remove(full_path)
+                deleted.append(full_path)
+
+    return {
+        "message": "🧹 Backend reset successfully.",
+        "files_deleted": deleted
+    }
+
