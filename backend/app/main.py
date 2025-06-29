@@ -9,10 +9,11 @@ import itertools
 import requests
 
 from model.train_model import train_model
+from app.model import load_model, predict_demand
 from convert_m5_to_input import convert_real_data
 from generate_future_input import generate_future_data
-from model import load_model, predict_demand
-from utils import preprocess_data
+from app.utils import preprocess_data
+
 
 app = Flask(__name__)
 CORS(app)
