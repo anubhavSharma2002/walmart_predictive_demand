@@ -46,20 +46,30 @@ store_locations = {
     "530001": [17.6868, 83.2185], "632001": [12.9165, 79.1325],
 }
 
+distance_cache = {}
+
 def get_coords_for_store(store_string):
     pincode = str(store_string).split('(')[-1].split(')')[0] if '(' in str(store_string) else str(store_string)
-    return store_locations.get(pincode, None)
+    return store_locations.get(pincode)
 
-def get_distance(store_a_string, store_b_string):
-    coords = get_coords_for_store(store_a_string), get_coords_for_store(store_b_string)
-    if not coords[0] or not coords[1]:
+def get_distance(a, b):
+    key = (a, b)
+    if key in distance_cache:
+        return distance_cache[key]
+
+    coords1, coords2 = get_coords_for_store(a), get_coords_for_store(b)
+    if not coords1 or not coords2:
         return 10
+
     try:
-        url = f"http://router.project-osrm.org/route/v1/driving/{coords[0][1]},{coords[0][0]};{coords[1][1]},{coords[1][0]}?overview=false"
-        data = requests.get(url).json()
-        return data["routes"][0]["distance"] / 1000.0 if "routes" in data and data["routes"] else 10
+        url = f"http://router.project-osrm.org/route/v1/driving/{coords1[1]},{coords1[0]};{coords2[1]},{coords2[0]}?overview=false"
+        res = requests.get(url).json()
+        distance = res["routes"][0]["distance"] / 1000 if "routes" in res and res["routes"] else 10
     except:
-        return 10
+        distance = 10
+
+    distance_cache[key] = distance
+    return distance
 
 @app.route("/status")
 def status():
@@ -207,97 +217,89 @@ def compare():
 
 @app.route("/optimize-transport/", methods=["POST"])
 def optimize_transport():
-    logging.debug("Transport optimization request received")
-    stock_file = request.files.get("stock_file")
-    if not stock_file:
-        return jsonify({"error": "No file uploaded."}), 400
+    try:
+        stock_file = request.files.get("stock_file")
+        if not stock_file:
+            return jsonify({"error": "No file uploaded."}), 400
 
-    cost_rate = float(request.form.get("cost_rate", 0))
-    min_quantity = int(request.form.get("min_quantity", 0))
+        cost_rate = float(request.form.get("cost_rate", 0))
+        min_quantity = int(request.form.get("min_quantity", 0))
 
-    path = os.path.join("uploads", stock_file.filename)
-    stock_file.save(path)
+        path = os.path.join("uploads", stock_file.filename)
+        stock_file.save(path)
 
-    df = pd.read_csv(path)
-    df.columns = [col.strip() for col in df.columns]
+        df = pd.read_csv(path)
+        df.columns = [c.strip() for c in df.columns]
 
-    if "Store (Pincode)" in df.columns:
-        df["Pincode"] = df["Store (Pincode)"].astype(str).str.strip()
-    elif "Store (Region)" in df.columns:
-        df["Pincode"] = df["Store (Region)"].apply(lambda x: str(x).split('(')[-1].split(')')[0] if '(' in str(x) else str(x))
-    else:
-        return jsonify({"error": "Missing store location column."})
+        if "Store (Pincode)" in df.columns:
+            df["Pincode"] = df["Store (Pincode)"].astype(str)
+        elif "Store (Region)" in df.columns:
+            df["Pincode"] = df["Store (Region)"].apply(lambda x: str(x).split('(')[-1].split(')')[0])
+        else:
+            return jsonify({"error": "Missing store location column."}), 400
 
-    df["Final Stock Count"] = (
-        df["Final Stock Count"].astype(str)
-        .str.replace('+', '', regex=False)
-        .str.replace(',', '', regex=False)
-        .str.strip()
-    )
-    df["Final Stock Count"] = pd.to_numeric(df["Final Stock Count"], errors="coerce").fillna(0).astype(int)
+        df["Final Stock Count"] = (
+            df["Final Stock Count"].astype(str)
+            .str.replace("+", "", regex=False)
+            .str.replace(",", "", regex=False)
+            .str.strip()
+        )
+        df["Final Stock Count"] = pd.to_numeric(df["Final Stock Count"], errors="coerce").fillna(0).astype(int)
 
-    surplus_rows = df[df["Final Stock Count"] > 0].to_dict(orient="records")
-    deficit_rows = df[df["Final Stock Count"] < 0].to_dict(orient="records")
+        surplus_rows = df[df["Final Stock Count"] > 0].to_dict(orient="records")
+        deficit_rows = df[df["Final Stock Count"] < 0].to_dict(orient="records")
 
-    results = []
-    for surplus in surplus_rows:
-        surplus_amount = surplus["Final Stock Count"]
-        surplus_store = surplus["Pincode"]
-        surplus_item = surplus["Product"]
-        eligible_deficits = [
-            d for d in deficit_rows
-            if d["Product"] == surplus_item and abs(d["Final Stock Count"]) >= min_quantity
-        ]
+        results = []
+        for surplus in surplus_rows:
+            available_stock = surplus["Final Stock Count"]
+            surplus_store = surplus["Pincode"]
+            surplus_item = surplus["Product"]
 
-        best_sequence = None
-        best_total_cost = float("inf")
-        best_total_distance = None
+            eligible_deficits = [
+                d for d in deficit_rows
+                if d["Product"] == surplus_item and abs(d["Final Stock Count"]) >= min_quantity
+            ]
 
-        for route in itertools.permutations(eligible_deficits):
-            total_cost = 0
-            total_distance = 0
-            available_stock = surplus_amount
-            route_sequence = []
+            eligible_deficits.sort(
+                key=lambda d: get_distance(surplus_store, d["Pincode"])
+            )
+
+            stops = []
             last_location = surplus_store
-
-            for deficit in route:
-                units_to_transport = min(available_stock, abs(deficit["Final Stock Count"]))
-                if units_to_transport < min_quantity:
+            for deficit in eligible_deficits:
+                if available_stock <= 0:
+                    break
+                units_to_transfer = min(available_stock, abs(deficit["Final Stock Count"]))
+                if units_to_transfer < min_quantity:
                     continue
-                distance = get_distance(last_location, deficit["Pincode"])
-                cost = units_to_transport * distance * cost_rate
-                route_sequence.append({
+                dist = get_distance(last_location, deficit["Pincode"])
+                cost = dist * units_to_transfer * cost_rate
+                stops.append({
                     "from_store": last_location,
                     "to_store": deficit["Pincode"],
                     "item": surplus_item,
-                    "units": units_to_transport,
-                    "distance": round(distance, 2),
+                    "units": units_to_transfer,
+                    "distance": round(dist, 2),
                     "cost": round(cost, 2),
-                    "time": round(distance * 1.25, 2)
+                    "time": round(dist * 1.25, 2)
                 })
-                total_distance += distance
-                total_cost += cost
-                available_stock -= units_to_transport
+                available_stock -= units_to_transfer
                 last_location = deficit["Pincode"]
-                if available_stock <= 0:
-                    break
 
-            if total_cost < best_total_cost and route_sequence:
-                best_total_cost = total_cost
-                best_total_distance = total_distance
-                best_sequence = route_sequence
+            if stops:
+                results.append({
+                    "from_store": surplus_store,
+                    "item": surplus_item,
+                    "total_distance": round(sum(s["distance"] for s in stops), 2),
+                    "total_cost": round(sum(s["cost"] for s in stops), 2),
+                    "estimated_total_time": round(sum(s["time"] for s in stops), 2),
+                    "stops": stops
+                })
 
-        if best_sequence:
-            results.append({
-                "from_store": surplus_store,
-                "item": surplus_item,
-                "total_distance": round(best_total_distance, 2),
-                "total_cost": round(best_total_cost, 2),
-                "estimated_total_time": round(sum(r["time"] for r in best_sequence), 2),
-                "stops": best_sequence,
-            })
-
-    return jsonify(results)
+        return jsonify(results)
+    except Exception as e:
+        logging.exception("Transport optimization failed")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/reset", methods=["POST"])
 def reset_backend():
