@@ -110,22 +110,28 @@ function TransportOptimization() {
         </h1>
 
         <div className={`flex flex-wrap gap-4 justify-center mb-6 transition-all duration-700 ease-out transform ${fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"} delay-[400ms]`}>
-          <input
-            type="number"
-            placeholder="Cost Rate (Rs/km/unit)"
-            value={costRate}
-            onChange={(e) => setCostRate(parseFloat(e.target.value))}
-            className="px-4 py-2 border rounded-lg shadow-sm"
-          />
-          <h4 className="text-sm text-gray-600 text-center">Cost Rate</h4>
-          <input
-            type="number"
-            placeholder="Min Quantity Threshold"
-            value={minThreshold}
-            onChange={(e) => setMinThreshold(parseInt(e.target.value))}
-            className="px-4 py-2 border rounded-lg shadow-sm"
-          />
-          <h4 className="text-sm text-gray-600 text-center">Min Quantity Threshold</h4>
+          <div className="flex flex-col items-center">
+            <input
+              type="number"
+              placeholder="Cost Rate (Rs/km/unit)"
+              value={costRate}
+              onChange={(e) => setCostRate(parseFloat(e.target.value))}
+              className="px-4 py-2 border rounded-lg shadow-sm"
+            />
+            <h4 className="text-sm text-gray-600 mt-1">Cost Rate</h4>
+          </div>
+
+          <div className="flex flex-col items-center">
+            <input
+              type="number"
+              placeholder="Min Quantity Threshold"
+              value={minThreshold}
+              onChange={(e) => setMinThreshold(parseInt(e.target.value))}
+              className="px-4 py-2 border rounded-lg shadow-sm"
+            />
+            <h4 className="text-sm text-gray-600 mt-1">Min Quantity Threshold</h4>
+          </div>
+
           <label className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition cursor-pointer">
             Choose CSV File
             <input
