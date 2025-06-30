@@ -12,6 +12,8 @@ function TransportOptimization() {
   const [loading, setLoading] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
   const [activeMapUrl, setActiveMapUrl] = useState("");
+  const [mapExpanded, setMapExpanded] = useState(false);
+
 
   useEffect(() => {
     setTimeout(() => setFadeIn(true), 100);
@@ -230,27 +232,40 @@ function TransportOptimization() {
         ))}
       </div>
 
-      {activeMapUrl && (
-        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 bg-white border rounded-lg shadow-xl z-50">
-          <div className="flex justify-between items-center bg-gray-100 px-4 py-2 border-b">
-            <p className="font-semibold">Route Preview</p>
-            <button
-              onClick={() => setActiveMapUrl("")}
-              className="text-red-500 font-semibold text-sm hover:underline"
-            >
-              Close
-            </button>
+        {activeMapUrl && (
+          <div className={`fixed ${mapExpanded ? "inset-0 m-4" : "bottom-4 left-4 right-4 md:left-auto md:right-4"} bg-white border rounded-lg shadow-xl z-50 max-w-5xl w-full md:w-[900px] h-[500px] transition-all duration-300 ease-in-out overflow-hidden`}>
+            <div className="flex justify-between items-center bg-gray-100 px-4 py-2 border-b">
+              <p className="font-semibold">Route Preview</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setMapExpanded(!mapExpanded)}
+                  className="text-blue-600 font-semibold text-sm hover:underline"
+                >
+                  {mapExpanded ? "Collapse" : "Expand"}
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveMapUrl("");
+                    setMapExpanded(false);
+                  }}
+                  className="text-red-500 font-semibold text-sm hover:underline"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={activeMapUrl}
+              title="Google Maps Route"
+              className={`w-full ${mapExpanded ? "h-[calc(100%-45px)]" : "h-[455px]"} rounded-b-lg`}
+              allowFullScreen
+              loading="lazy"
+            />
           </div>
-          <iframe
-            src={activeMapUrl}
-            title="Google Maps Route"
-            className="w-full h-[300px] rounded-b-lg"
-            allowFullScreen
-            loading="lazy"
-          />
+        )}
 
-        </div>
-      )}
+
+
 
       <style>{`
         .loader {
