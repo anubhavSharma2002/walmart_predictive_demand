@@ -137,10 +137,7 @@ function TransportOptimization() {
             Optimize
           </button>
           <button onClick={handleExport} className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition">
-            Export Grouped Results (.csv)
-          </button>
-          <button onClick={() => (window.location.href = "/compare")} className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition">
-            Go to Compare Page
+            Export(.csv)
           </button>
         </div>
 
