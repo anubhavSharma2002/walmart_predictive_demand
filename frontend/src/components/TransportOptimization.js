@@ -117,6 +117,7 @@ function TransportOptimization() {
             onChange={(e) => setCostRate(parseFloat(e.target.value))}
             className="px-4 py-2 border rounded-lg shadow-sm"
           />
+          <h4>Cost Rate</h4>
           <input
             type="number"
             placeholder="Min Quantity Threshold"
@@ -124,6 +125,7 @@ function TransportOptimization() {
             onChange={(e) => setMinThreshold(parseInt(e.target.value))}
             className="px-4 py-2 border rounded-lg shadow-sm"
           />
+          <h4>Min Quantity Threshold</h4>
           <label className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition cursor-pointer">
             Choose CSV File
             <input
