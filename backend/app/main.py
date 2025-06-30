@@ -16,7 +16,10 @@ from app.utils import preprocess_data
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=[
+    "http://localhost:3000",
+    "https://walmart-predictive-demand.vercel.app"
+])
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -204,6 +207,7 @@ def compare():
 
 @app.route("/optimize-transport/", methods=["POST"])
 def optimize_transport():
+    print("Request received for transport optimization")  # Add this
     stock_file = request.files.get("stock_file")
     cost_rate = float(request.form.get("cost_rate", 0))
     min_quantity = int(request.form.get("min_quantity", 0))
