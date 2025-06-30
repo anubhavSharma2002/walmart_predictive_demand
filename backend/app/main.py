@@ -149,8 +149,8 @@ def compare():
         return jsonify({"error": "Prediction data not available"})
 
     df = pd.read_csv("exports/prediction.csv")
-    next_7_days = [(datetime.today() + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
-    df = df[df["date"].isin(next_7_days)]
+    next_30_days = [(datetime.today() + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(30)]
+    df = df[df["date"].isin(next_30_days)]
     if product_id != "All":
         df = df[df["product_id"].astype(str) == str(product_id)]
     if df.empty:
@@ -175,13 +175,30 @@ def compare():
         status = "Overstock" if inventory_count > row["predicted_demand"] else (
             "Understock" if inventory_count < row["predicted_demand"] else "As required"
         )
+        stock_end_date = None
+
+        if status == "Understock":
+            prediction_subset = df[
+                (df["product_id"] == row["product_id"]) &
+                (df["region"] == row["region"])
+            ].sort_values("date")
+            
+            stock_left = inventory_count
+            for _, pred_row in prediction_subset.iterrows():
+                stock_left -= pred_row["predicted_demand"]
+                if stock_left <= 0:
+                    stock_end_date = pred_row["date"]
+                    break
+
         results.append({
             "product_id": row["product_id"],
             "region": prediction_pincode,
             "sum_predicted": round(row["predicted_demand"], 2),
             "inventory": int(inventory_count),
-            "status": status
+            "status": status,
+            "stock_end_date": stock_end_date  # ✅ Add this
         })
+
 
     return jsonify(sorted(results, key=lambda x: x["sum_predicted"], reverse=True))
 

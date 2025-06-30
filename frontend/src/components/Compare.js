@@ -231,6 +231,7 @@ function Compare({ productOptions }) {
                   <th className="border p-3">Inventory</th>
                   <th className="border p-3">Status</th>
                   <th className="border p-3">Stock (+/-)</th>
+                  <th className="border p-3">Stock End Date</th>
                 </tr>
               </thead>
               <tbody>
@@ -264,6 +265,10 @@ function Compare({ productOptions }) {
                         {row.status}
                       </td>
                       <td className="border p-2">{stockDisplay}</td>
+                      <td className="border p-2">
+                        {row.status === "Understock" ? row.stock_end_date || "Unknown" : "-"}
+                      </td>
+
                     </tr>
                   );
                 })}
