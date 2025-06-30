@@ -207,8 +207,11 @@ def compare():
 
 @app.route("/optimize-transport/", methods=["POST"])
 def optimize_transport():
-    print("Request received for transport optimization")  # Add this
+    logging.debug("Transport optimization request received")
     stock_file = request.files.get("stock_file")
+    if not stock_file:
+        return jsonify({"error": "No file uploaded."}), 400
+
     cost_rate = float(request.form.get("cost_rate", 0))
     min_quantity = int(request.form.get("min_quantity", 0))
 
@@ -241,7 +244,10 @@ def optimize_transport():
         surplus_amount = surplus["Final Stock Count"]
         surplus_store = surplus["Pincode"]
         surplus_item = surplus["Product"]
-        eligible_deficits = [d for d in deficit_rows if d["Product"] == surplus_item and abs(d["Final Stock Count"]) >= min_quantity]
+        eligible_deficits = [
+            d for d in deficit_rows
+            if d["Product"] == surplus_item and abs(d["Final Stock Count"]) >= min_quantity
+        ]
 
         best_sequence = None
         best_total_cost = float("inf")
