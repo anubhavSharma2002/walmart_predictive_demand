@@ -132,7 +132,7 @@ function TransportOptimization() {
             <h4 className="text-sm text-gray-600 mt-1">Min Quantity Threshold</h4>
           </div>
         </div>
-        <div className={`flex flex-col items-center mb-6 transition-all duration-700 ease-out transform ${fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"} delay-[600ms]`}>
+        <div className={`flex flex-wrap gap-4 justify-center mb-6 transition-all duration-700 ease-out transform ${fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"} delay-[400ms]`}>
           <label className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition cursor-pointer">
             Choose CSV File
             <input
