@@ -1,8 +1,7 @@
-// Compare.js
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-function Compare({ productOptions }) {
+function Compare({ productOptions = [] }) {
   const [selectedProduct, setSelectedProduct] = useState("All");
   const [selectedRegionGroup, setSelectedRegionGroup] = useState("All");
   const [selectedStore, setSelectedStore] = useState("All");
@@ -10,7 +9,6 @@ function Compare({ productOptions }) {
   const [error, setError] = useState("");
   const [fadeIn, setFadeIn] = useState(false);
 
-  // New inventory upload states
   const [inventoryFile, setInventoryFile] = useState(null);
   const [inventoryMessage, setInventoryMessage] = useState("");
   const [uploadingInventory, setUploadingInventory] = useState(false);
@@ -51,20 +49,48 @@ function Compare({ productOptions }) {
     setTimeout(() => setFadeIn(true), 100);
   }, []);
 
-  const walmartStoreLocations = [/* same store data as before */];
+  const walmartStoreLocations = [
+    { pincode: "282001", name: "Agra Walmart", region: "North" },
+    { pincode: "143001", name: "Amritsar Walmart", region: "North" },
+    { pincode: "160017", name: "Chandigarh Walmart", region: "North" },
+    { pincode: "110001", name: "Delhi Walmart", region: "North" },
+    { pincode: "144001", name: "Jalandhar Walmart", region: "North" },
+    { pincode: "141001", name: "Ludhiana Walmart", region: "North" },
+    { pincode: "250001", name: "Meerut Walmart", region: "North" },
+    { pincode: "400001", name: "Mumbai Walmart", region: "West" },
+    { pincode: "440001", name: "Nagpur Walmart", region: "West" },
+    { pincode: "444601", name: "Amravati Walmart", region: "West" },
+    { pincode: "452001", name: "Indore Walmart", region: "West" },
+    { pincode: "302001", name: "Jaipur Walmart", region: "West" },
+    { pincode: "431001", name: "Aurangabad Walmart", region: "West" },
+    { pincode: "492001", name: "Raipur Walmart", region: "East" },
+    { pincode: "834001", name: "Ranchi Walmart", region: "East" },
+    { pincode: "700001", name: "Kolkata Walmart", region: "East" },
+    { pincode: "522002", name: "Guntur Walmart", region: "East" },
+    { pincode: "781001", name: "Guwahati Walmart", region: "East" },
+    { pincode: "533101", name: "Rajahmundry Walmart", region: "East" },
+    { pincode: "520001", name: "Vijayawada Walmart", region: "East" },
+    { pincode: "560001", name: "Bengaluru Walmart", region: "South" },
+    { pincode: "600001", name: "Chennai Walmart", region: "South" },
+    { pincode: "641001", name: "Coimbatore Walmart", region: "South" },
+    { pincode: "500001", name: "Hyderabad Walmart", region: "South" },
+    { pincode: "530001", name: "Visakhapatnam Walmart", region: "South" },
+    { pincode: "632001", name: "Vellore Walmart", region: "South" },
+  ];
 
   const handleCompare = async () => {
     setError("");
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/compare`, {
-        params: { product_id: selectedProduct },
-      });
-
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/compare`);
       if (res.data.error) {
         setError(res.data.error);
         setResults([]);
       } else {
         let filtered = res.data;
+
+        if (selectedProduct !== "All") {
+          filtered = filtered.filter((r) => r.product_id === selectedProduct);
+        }
 
         if (selectedRegionGroup !== "All") {
           filtered = filtered.filter((r) => {
@@ -116,6 +142,8 @@ function Compare({ productOptions }) {
     document.body.removeChild(link);
   };
 
+  const allProductOptions = [...new Set(results.map((r) => r.product_id))];
+
   return (
     <div className="min-h-screen bg-[#F3F5FF] py-12 px-4 font-[Poppins] text-[#1E293B]">
       <div className={`max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-8 transition-all duration-700 ease-out transform ${fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"} delay-[100ms]`}>
@@ -149,16 +177,27 @@ function Compare({ productOptions }) {
           )}
         </div>
 
-        {/* Filters and Actions */}
+        {/* Filters */}
         <div className="flex flex-wrap gap-4 justify-center mb-6">
-          <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} className="px-4 py-2 border rounded-lg shadow-sm">
+          <select
+            value={selectedProduct}
+            onChange={(e) => setSelectedProduct(e.target.value)}
+            className="px-4 py-2 border rounded-lg shadow-sm"
+          >
             <option value="All">All Products</option>
-            {productOptions.map((p) => (
+            {(productOptions.length ? productOptions : allProductOptions).map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
 
-          <select value={selectedRegionGroup} onChange={(e) => { setSelectedRegionGroup(e.target.value); setSelectedStore("All"); }} className="px-4 py-2 border rounded-lg shadow-sm">
+          <select
+            value={selectedRegionGroup}
+            onChange={(e) => {
+              setSelectedRegionGroup(e.target.value);
+              setSelectedStore("All");
+            }}
+            className="px-4 py-2 border rounded-lg shadow-sm"
+          >
             <option value="All">All Regions</option>
             <option value="North">North</option>
             <option value="West">West</option>
@@ -166,7 +205,11 @@ function Compare({ productOptions }) {
             <option value="South">South</option>
           </select>
 
-          <select value={selectedStore} onChange={(e) => setSelectedStore(e.target.value)} className="px-4 py-2 border rounded-lg shadow-sm">
+          <select
+            value={selectedStore}
+            onChange={(e) => setSelectedStore(e.target.value)}
+            className="px-4 py-2 border rounded-lg shadow-sm"
+          >
             <option value="All">All Stores</option>
             {walmartStoreLocations
               .filter((w) => selectedRegionGroup === "All" || w.region === selectedRegionGroup)
@@ -177,16 +220,18 @@ function Compare({ productOptions }) {
               ))}
           </select>
 
-          <button onClick={handleCompare} className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition">
+          <button
+            onClick={handleCompare}
+            className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition"
+          >
             Compare
           </button>
 
-          <button onClick={handleExportReport} className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition">
+          <button
+            onClick={handleExportReport}
+            className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition"
+          >
             Export Stock Report (.csv)
-          </button>
-
-          <button onClick={() => (window.location.href = "/transport")} className="bg-[#5335D9] hover:bg-[#0B0A33] text-white px-5 py-2 rounded-lg font-medium shadow-sm transition">
-            Go to Transport Optimization
           </button>
         </div>
 
@@ -194,7 +239,6 @@ function Compare({ productOptions }) {
           <p className="text-red-600 text-center mb-4">{error}</p>
         )}
 
-        {/* Results Table */}
         {results.length > 0 ? (
           <div className="overflow-x-auto mt-4">
             <table className="w-full border text-sm text-center rounded-xl overflow-hidden">
