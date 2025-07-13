@@ -1,6 +1,6 @@
+// Dashboard.js
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import Controls from "./Controls";
 import Table from "./Table";
 import Chart from "./Chart";
@@ -11,13 +11,7 @@ function Dashboard() {
   const [filters, setFilters] = useState({ product: "", date: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [inventoryFile, setInventoryFile] = useState(null);
-  const [inventoryMessage, setInventoryMessage] = useState("");
-  const [uploadingInventory, setUploadingInventory] = useState(false);
-  const [inventoryUploaded, setInventoryUploaded] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
-
-  const navigate = useNavigate();
 
   const fetchPrediction = useCallback(() => {
     setLoading(true);
@@ -47,43 +41,6 @@ function Dashboard() {
     setTimeout(() => setFadeIn(true), 100);
   }, [fetchPrediction]);
 
-  const handleInventoryUpload = async () => {
-    if (!inventoryFile) {
-      setInventoryMessage("❌ Please select an inventory file first.");
-      return;
-    }
-
-    setUploadingInventory(true);
-    setInventoryMessage("");
-    const formData = new FormData();
-    formData.append("inventory_file", inventoryFile);
-
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/upload-inventory/`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.message) {
-        setInventoryMessage(data.message);
-        setInventoryUploaded(true);
-      } else if (data.error) {
-        setInventoryMessage(`❌ Error: ${data.error}`);
-      } else {
-        setInventoryMessage("⚠️ Unknown response from server.");
-      }
-    } catch (error) {
-      setInventoryMessage(`❌ Upload failed: ${error.message}`);
-    } finally {
-      setUploadingInventory(false);
-    }
-  };
-
-  const handleCompareRedirect = () => {
-    navigate("/compare");
-  };
-
   const productOptions = [...new Set(data.map((d) => d.product_id))];
   const filtered = data.filter(
     (row) =>
@@ -93,10 +50,8 @@ function Dashboard() {
 
   return (
     <div className="relative min-h-screen bg-[#F3F5FF] text-[#1E293B] p-8 font-[Poppins] overflow-hidden">
-      {/* Background Lines */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(#c7d2fe_1px,transparent_1px)] [background-size:20px_20px] opacity-20"></div>
 
-      {/* Content Wrapper */}
       <div className="relative z-10">
         <h1
           className={`text-5xl font-bold text-center mb-8 mt-20 tracking-tight transition-all duration-700 ease-out transform ${
@@ -127,80 +82,27 @@ function Dashboard() {
             fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           } delay-[700ms]`}
         >
-          <h2 className="text-2xl font-semibold text-[#1E293B] mb-5">
-            Compare With Your Inventory
-          </h2>
+          <button
+            onClick={async () => {
+              const confirmed = window.confirm("Are you sure you want to reset all uploaded data and predictions?");
+              if (!confirmed) return;
 
-          <div className="flex flex-col sm:flex-row flex-wrap gap-4 items-center justify-center">
-            <label className="w-[200px] text-center cursor-pointer text-white bg-[#5335D9] hover:bg-[#0B0A33] transition px-4 py-2 rounded-full shadow-sm font-medium relative">
-              Select Inventory File
-              <input
-                type="file"
-                accept=".csv"
-                onChange={(e) => {
-                  setInventoryFile(e.target.files[0]);
-                  setInventoryUploaded(false);
-                }}
-                className="hidden"
-              />
-              {inventoryFile && (
-                <span className="absolute -bottom-6 text-xs text-green-600 font-medium">
-                  {inventoryUploaded ? "" : `${inventoryFile.name}`}
-                </span>
-              )}
-            </label>
-
-            <button
-              onClick={handleInventoryUpload}
-              disabled={uploadingInventory}
-              className="w-[200px] bg-[#5335D9] hover:bg-[#0B0A33] px-5 py-2 rounded-full text-white font-medium shadow-sm transition disabled:opacity-50"
-            >
-              {uploadingInventory ? "Uploading..." : "Upload Inventory"}
-            </button>
-
-            <button
-              onClick={handleCompareRedirect}
-              className="w-[200px] px-5 py-2 rounded-full text-[#5335d9] border border-[#5335d9] hover:border-[#0B0A33] bg-[#F3F5FF] hover:bg-[#0B0A33] hover:text-white font-medium shadow-sm transition"
-            >
-              Compare
-            </button>
-          </div>
-              <button
-                  onClick={async () => {
-                    const confirmed = window.confirm("Are you sure you want to reset all uploaded data and predictions?");
-                    if (!confirmed) return;
-
-                    try {
-                      const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/reset`, {
-                        method: "POST",
-                      });
-                      const result = await res.json();
-                      alert(result.message);
-                      fetchPrediction(); // refresh data
-                    } catch (err) {
-                      alert("❌ Failed to reset backend.");
-                    }
-                  }}
-                  className="mt-4 w-[200px] bg-red-600 hover:bg-red-800 text-white px-5 py-2 rounded-full font-medium shadow-sm transition"
-                >
-                  🧹 Reset Backend
-              </button>
-
-        </div>
-
-        {inventoryMessage && (
-          <p
-            className={`mt-4 text-center font-medium ${
-              inventoryMessage.includes("✔") || inventoryMessage.includes("success")
-                ? "text-green-600"
-                : "text-red-600"
-            } transition-all duration-700 ease-out transform ${
-              fadeIn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-            } delay-[900ms]`}
+              try {
+                const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/reset`, {
+                  method: "POST",
+                });
+                const result = await res.json();
+                alert(result.message);
+                fetchPrediction(); // refresh data
+              } catch (err) {
+                alert("❌ Failed to reset backend.");
+              }
+            }}
+            className="mt-4 w-[200px] bg-red-600 hover:bg-red-800 text-white px-5 py-2 rounded-full font-medium shadow-sm transition"
           >
-            {inventoryMessage}
-          </p>
-        )}
+            🧹 Reset Backend
+          </button>
+        </div>
 
         {!loading && !error && filtered.length > 0 && (
           <>
